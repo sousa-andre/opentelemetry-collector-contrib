@@ -552,6 +552,57 @@ func TestDeletedLogGroupDuringAutodiscover(t *testing.T) {
 	mc.AssertExpectations(t)
 }
 
+func TestPollForLogsSetsCheckpoint(t *testing.T) {
+	cfg := createDefaultConfig().(*Config)
+	cfg.Region = "us-west-1"
+	cfg.Logs.PollInterval = 1 * time.Second
+	cfg.Logs.Groups = GroupConfig{
+		NamedConfigs: map[string]StreamConfig{
+			testLogGroupName: {
+				Names: []*string{&testLogStreamName},
+			},
+		},
+	}
+
+	sink := &consumertest.LogsSink{}
+	logsRcvr := newLogsReceiver(cfg, receiver.Settings{
+		TelemetrySettings: component.TelemetrySettings{
+			Logger: zap.NewNop(),
+		},
+	}, sink)
+	mc := mockClient{}
+
+	expectedTimestamp := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	mc.On("FilterLogEvents", mock.Anything, mock.Anything, mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{
+		Events: []types.FilteredLogEvent{
+			{
+				EventId:       aws.String("event1"),
+				LogStreamName: aws.String("stream1"),
+				Message:       aws.String("test message"),
+				Timestamp:     aws.Int64(time.Date(2019, 1, 1, 0, 0, 0, 0, time.UTC).UnixMilli()),
+			},
+			{
+				EventId:       aws.String("event2"),
+				LogStreamName: aws.String("stream2"),
+				Message:       aws.String("test message 2"),
+				Timestamp:     aws.Int64(expectedTimestamp.UnixMilli()),
+			},
+		},
+		NextToken: nil,
+	}, nil)
+
+	logsRcvr.client = &mc
+	requiredTime, _ := logsRcvr.pollForLogs(
+		context.Background(),
+		&streamNames{},
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
+	)
+
+	require.Equal(t, expectedTimestamp.Unix(), requiredTime.Unix())
+}
+
 func defaultMockClient() client {
 	mc := &mockClient{}
 	mc.On("DescribeLogGroups", mock.Anything, mock.Anything, mock.Anything).Return(
