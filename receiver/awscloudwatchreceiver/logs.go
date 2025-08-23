@@ -271,8 +271,8 @@ func (l *logsReceiver) poll(ctx context.Context) error {
 				}
 			}
 		}()
-		wg.Wait()
 	}
+	wg.Wait()
 
 	// Update the receiver's nextStartTime for the next poll cycle
 	l.nextStartTime = endTime
