@@ -7,7 +7,7 @@ change_type: enhancement
 component: awscloudwatchreceiver
 
 # A brief description of the change.  Surround your text with quotes ("") if it needs to start with a backtick (`).
-note: Improves performance of the receiver when handling multiple log groups
+note: Improves receiver performance when handling multiple log groups by adding a max_concurrent_groups configuration option that controls how many log groups are processed concurrently
 
 # Mandatory: One or more tracking issues related to the change. You can use the PR number here if no issue exists.
 issues: [41115]

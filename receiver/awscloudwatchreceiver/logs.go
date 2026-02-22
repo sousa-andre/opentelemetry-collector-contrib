@@ -36,6 +36,7 @@ type logsReceiver struct {
 	imdsEndpoint                  string
 	pollInterval                  time.Duration
 	maxEventsPerRequest           int
+	maxConcurrentGroups           int
 	nextStartTime                 time.Time
 	groupRequests                 []groupRequest
 	autodiscover                  *AutodiscoverConfig
@@ -144,6 +145,7 @@ func newLogsReceiver(cfg *Config, settings receiver.Settings, consumer consumer.
 		imdsEndpoint:        cfg.IMDSEndpoint,
 		autodiscover:        autodiscover,
 		pollInterval:        cfg.Logs.PollInterval,
+		maxConcurrentGroups: cfg.Logs.MaxConcurrentGroups,
 		nextStartTime:       startTime,
 		groupRequests:       groups,
 		wg:                  &sync.WaitGroup{},
@@ -218,8 +220,12 @@ func (l *logsReceiver) poll(ctx context.Context) error {
 	var errMu sync.Mutex
 	var wg sync.WaitGroup
 
+	workers := make(chan int, l.maxConcurrentGroups)
+
 	for _, r := range l.groupRequests {
 		wg.Add(1)
+		workers <- 1
+
 		go func() {
 			defer wg.Done()
 			startTime := l.nextStartTime
@@ -270,6 +276,7 @@ func (l *logsReceiver) poll(ctx context.Context) error {
 						zap.Error(err))
 				}
 			}
+			<-workers
 		}()
 	}
 	wg.Wait()
@@ -426,9 +433,13 @@ func (l *logsReceiver) discoverGroups(ctx context.Context, auto *AutodiscoverCon
 		if err != nil {
 			return groups, fmt.Errorf("unable to list log groups: %w", err)
 		}
+		l.settings.Logger.Debug("Number of log groups found", zap.Int("num_groups", len(dlgResults.LogGroups)))
 
 		for i := range dlgResults.LogGroups {
 			lg := &dlgResults.LogGroups[i]
+			l.settings.Logger.Debug("found log group",
+				zap.Any("array", lg),
+				zap.Int("index", i))
 			if numGroups == auto.Limit {
 				l.settings.Logger.Debug("reached limit of the number of log groups to discover."+
 					"To increase the number of groups able to be discovered, please increase the autodiscover limit field.",
