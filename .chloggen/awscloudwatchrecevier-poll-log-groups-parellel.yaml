@@ -4,7 +4,7 @@
 change_type: enhancement
 
 # The name of the component, or a single word describing the area of concern, (e.g. filelogreceiver)
-component: awscloudwatchreceiver
+component: receiver/awscloudwatch
 
 # A brief description of the change.  Surround your text with quotes ("") if it needs to start with a backtick (`).
 note: Improves receiver performance when handling multiple log groups by adding a max_concurrent_groups configuration option that controls how many log groups are processed concurrently
