@@ -737,7 +737,7 @@ func TestPollForLogsSetsCheckpointLastMessage(t *testing.T) {
 
 	logsRcvr.client = &mc
 	requiredTime, _ := logsRcvr.pollForLogs(
-		context.Background(),
+		t.Context(),
 		&streamNames{},
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
@@ -776,7 +776,7 @@ func TestPollForLogsSetsCheckpointNoData(t *testing.T) {
 
 	logsRcvr.client = &mc
 	requiredTime, _ := logsRcvr.pollForLogs(
-		context.Background(),
+		t.Context(),
 		&streamNames{},
 		time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(2020, 1, 2, 0, 0, 0, 0, time.UTC),
@@ -850,7 +850,7 @@ func TestPollSetsGroupNextStartTimes(t *testing.T) {
 
 	logsRcvr.client = &mc
 
-	err := logsRcvr.poll(context.Background())
+	err := logsRcvr.poll(t.Context())
 
 	// Verify no errors
 	require.NoError(t, err)
